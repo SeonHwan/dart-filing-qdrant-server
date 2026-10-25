@@ -1,0 +1,18 @@
+services:
+  qdrant:
+    # latest 대신 버전 고정 — 받는 시점마다 서버 버전이 달라지면 클라이언트(qdrant-client)와
+    # 어긋나 버전 경고가 뜨고, 측정 결과를 다른 날과 비교할 때 서버 차이가 섞인다.
+    # 올릴 때는 클라이언트(qdrant-client)도 같이 올린다.
+    image: qdrant/qdrant:v1.19.1
+    container_name: dart-filing-qdrant
+    ports:
+      # 127.0.0.1에만 묶는다. "6333:6333"은 모든 네트워크 주소(0.0.0.0)에서 받아서, 인증이 없는
+      # 이 구성에서는 같은 네트워크의 누구나 컬렉션을 읽고 지울 수 있다.
+      # gRPC(6334)는 클라이언트가 REST만 쓰므로 열지 않는다.
+      - "127.0.0.1:6333:6333" # REST API
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+
+volumes:
+  qdrant_storage:

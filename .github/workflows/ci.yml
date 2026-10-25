@@ -1,0 +1,39 @@
+name: CI
+
+# 이 프로젝트는 상시 호스팅을 하지 않는다(로컬 Docker로만 운용). 그래서 이 워크플로는
+# "배포"가 아니라 "서버 구성이 실제로 동작하는지"만 검증한다 — push할 때마다
+# docker-compose.yml로 Qdrant를 실제로 띄워보고 헬스체크에 응답하는지 확인한 뒤 내린다.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: docker-compose 설정 유효성 검사
+        run: docker compose config
+
+      - name: Qdrant 기동
+        run: docker compose up -d
+
+      - name: 헬스체크 대기
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:6333/healthz; then
+              echo "healthy"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Qdrant가 제한 시간 안에 healthy 상태가 되지 않음"
+          docker compose logs
+          exit 1
+
+      - name: 컨테이너 종료
+        if: always()
+        run: docker compose down
